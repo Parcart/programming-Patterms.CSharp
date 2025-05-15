@@ -1,5 +1,7 @@
 # Этот код моделирует класс InstagramClient, который нельзя менять по условиям задания.
 # Он имитирует внешний компонент или библиотеку для взаимодействия с Instagram.
+from abc import ABC, abstractmethod
+
 
 class InstagramUser: # Создал класс InstagramUser
     """
@@ -102,11 +104,49 @@ class SocialNetworkUser:
         self.user_name = user_name
 
 
+# РЕШЕНИЕ начинается от сюда да
+# 1. Создаем интерфейс для работы с социальными сетями
+class ISocialNetworkClient:
+    def get_subscribers(self, username: str) -> list[SocialNetworkUser]:
+        raise NotImplementedError("Я не позер")
+
+
+# 2. Реализуем адаптеры для каждой социальной сети
+class TwitterClientAdapter(ISocialNetworkClient):
+    def __init__(self, client: TwitterClient):
+        self._client = client
+
+    def get_subscribers(self, username: str) -> list[SocialNetworkUser]:
+        user_id = self._client.get_user_id_by_name(username)
+        subscribers = self._client.get_subscribers(user_id)
+        return [SocialNetworkUser(sub.user_id) for sub in subscribers]
+
+
+class InstagramClientAdapter(ISocialNetworkClient):
+    def __init__(self, client: InstagramClient):
+        self._client = client
+
+    def get_subscribers(self, username: str) -> list[SocialNetworkUser]:
+        subscribers = self._client.get_subscribers(username)
+        return [SocialNetworkUser(sub.username) for sub in subscribers]
+
+
+# 3. Модифицируем SubscriberViewer
 class SubscriberViewer:
-    """
-    Возвращает список подписчиков пользователя из социальной сети.
-    TODO: необходимо изменить этот метод по условиям задачи
-    """
-    def get_subscribers(self, user_name: str, network_type: 'SocialNetwork') -> list['SocialNetworkUser']:
-        # TODO: реализовать логику получения подписчиков
-        return None
+    def __init__(self):
+        # Инициализируем клиенты (можно вынести в конфигурацию)
+        self._clients = {
+            SocialNetwork.Twitter: TwitterClientAdapter(TwitterClient()),
+            SocialNetwork.Instagram: InstagramClientAdapter(InstagramClient())
+        }
+
+    def get_subscribers(self, user_name: str, network_type: SocialNetwork) -> list[SocialNetworkUser]:
+        client = self._clients.get(network_type)
+        if not client:
+            raise ValueError(f"Unsupported social network: {network_type}")
+
+        return client.get_subscribers(user_name)
+
+    def register_client(self, network_type: SocialNetwork, client: ISocialNetworkClient):
+        """Метод для добавления новых социальных сетей без изменения основного кода"""
+        self._clients[network_type] = client

@@ -32,6 +32,7 @@ class FtpClient:
 
 
 
+# раз уж код переношу, то перенесу с ABC, но в питоне это для позеров
 class ILogReader(ABC): # Абстрактный базовый класс
 
     @abstractmethod
@@ -112,6 +113,20 @@ class LogImporter:
         # TODO: Добавьте логику обработки file_content и extra_param
 
 
+# НОВЫЙ АДАПТЕР
+class FtpLogReader(ILogReader):
+    """
+    Адаптер для использования FtpClient через интерфейс ILogReader
+    """
+    def __init__(self, ftp_client: FtpClient, login: str, password: str):
+        self._ftp_client = ftp_client
+        self._login = login
+        self._password = password
+
+    def read_log_file(self, identificator: str) -> str:
+        return self._ftp_client.read_file(self._login, self._password, identificator)
+
+
 class LogImporterClient:
     """
     Клиентский класс, использующий LogImporter для импорта логов.
@@ -138,7 +153,10 @@ class LogImporterClient:
 
         # TODO: Добавьте другую логику, используя log_importer и file_log_reader
 
-# Пример использования класса LogImporterClient
-if __name__ == "__main__":
-    client = LogImporterClient()
-    client.do_method()
+        # РЕШЕНИЕ
+        # Использование FtpClient через адаптер
+        ftp_client = FtpClient()
+        ftp_reader = FtpLogReader(ftp_client, "admin", "12345")
+        importer = LogImporter(ftp_reader)
+        importer.import_logs("remote_log.txt")
+
